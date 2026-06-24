@@ -87,6 +87,16 @@ def list_schedules(db: Session = Depends(get_db)):
     ]
 
 
+@app.delete("/users/{user_id}", status_code=204, summary="Delete user and all their scheduled messages")
+def delete_user(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    db.delete(user)
+    db.commit()
+    logger.info(f"DELETE | User ID: {user_id} | Name: {user.name}")
+
+
 @app.post("/simulate-crash/{message_id}", summary="Failure Mode 1: crash after send, before status update")
 def simulate_crash(message_id: int, db: Session = Depends(get_db)):
     try:

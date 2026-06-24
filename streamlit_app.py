@@ -7,6 +7,14 @@ API = "http://localhost:8000"
 
 st.set_page_config(page_title="Welcome Sequence", page_icon="📬", layout="centered")
 
+st.markdown("""
+<style>
+    #MainMenu {visibility: hidden;}
+    header [data-testid="stToolbar"] {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+""", unsafe_allow_html=True)
+
 # ── session state defaults ───────────────────────────────────────────────────
 for k, v in {
     "page":         "signup",
@@ -155,7 +163,18 @@ def page_schedules():
     # ── Users table ──────────────────────────────────────────────────────────
     st.markdown(f"### 👥 Registered Users &nbsp; `{len(users)}`", unsafe_allow_html=True)
     if users:
-        st.dataframe(users, use_container_width=True)
+        for u in users:
+            col_info, col_del = st.columns([5, 1])
+            with col_info:
+                st.markdown(f"**#{u['id']}** {u['name']} — `{u['email']}` — {u['phone']}")
+            with col_del:
+                if st.button("🗑️ Delete", key=f"del_{u['id']}"):
+                    resp = requests.delete(f"{API}/users/{u['id']}", timeout=5)
+                    if resp.status_code == 204:
+                        st.success(f"User #{u['id']} deleted.")
+                        st.rerun()
+                    else:
+                        st.error("Delete failed.")
     else:
         st.info("No users registered yet.")
 

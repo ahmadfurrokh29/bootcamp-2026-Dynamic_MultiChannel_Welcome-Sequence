@@ -13,7 +13,7 @@ class User(Base):
     phone:      Mapped[str]      = mapped_column(String,  nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    schedules: Mapped[list["MessageSchedule"]] = relationship(back_populates="user")
+    schedules: Mapped[list["MessageSchedule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class MessageSchedule(Base):
