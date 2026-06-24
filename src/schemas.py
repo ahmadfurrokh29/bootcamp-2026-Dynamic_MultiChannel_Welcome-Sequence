@@ -13,6 +13,7 @@ class ScheduledMessageOut(BaseModel):
     message_type: str
     channel:      str
     send_at:      datetime
+    sent_at:      datetime | None = None
     status:       str
 
     model_config = {"from_attributes": True}

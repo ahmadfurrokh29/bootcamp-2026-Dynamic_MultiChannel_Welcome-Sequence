@@ -24,7 +24,8 @@ class MessageSchedule(Base):
     message_type: Mapped[str]      = mapped_column(String,  nullable=False)  # welcome / sms_followup / final_tips
     channel:      Mapped[str]      = mapped_column(String,  nullable=False)  # email / sms
     send_at:      Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    status:       Mapped[str]      = mapped_column(String,  default="pending")  # pending / sent
-    created_at:   Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    status:       Mapped[str]              = mapped_column(String,  default="pending")  # pending / sent
+    sent_at:      Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at:   Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
 
     user: Mapped["User"] = relationship(back_populates="schedules")

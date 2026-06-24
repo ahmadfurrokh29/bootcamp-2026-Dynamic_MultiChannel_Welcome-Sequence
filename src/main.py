@@ -80,6 +80,7 @@ def list_schedules(db: Session = Depends(get_db)):
             "message_type": r.message_type,
             "channel": r.channel,
             "send_at": r.send_at,
+            "sent_at": r.sent_at,
             "status": r.status,
         }
         for r in db.query(MessageSchedule).all()

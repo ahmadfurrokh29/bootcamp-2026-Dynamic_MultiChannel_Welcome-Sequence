@@ -42,7 +42,8 @@ def process_due_messages(db: Session, simulate_crash_after_id: int | None = None
             logger.warning(f"CRASH SIMULATED after msg ID {msg.id} — status NOT updated")
             raise SystemExit("Simulated crash for failure mode demo")
 
-        msg.status = "sent"
+        msg.status  = "sent"
+        msg.sent_at = sent_time
         db.commit()
 
 

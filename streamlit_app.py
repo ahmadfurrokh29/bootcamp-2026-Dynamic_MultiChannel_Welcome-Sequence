@@ -167,10 +167,20 @@ def page_schedules():
             ci = "📧" if s["channel"] == "email" else "📱"
             label = f"{si} {ci} **{s['message_type']}** — User #{s['user_id']} — `{s['status'].upper()}`"
             with st.expander(label):
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Channel",    s["channel"])
-                col2.metric("Status",     s["status"])
-                col3.metric("Scheduled",  s["send_at"][:16].replace("T", " "))
+                if s["status"] == "sent" and s.get("sent_at"):
+                    due  = datetime.fromisoformat(s["send_at"])
+                    sent = datetime.fromisoformat(s["sent_at"])
+                    drift_s = (sent - due).total_seconds()
+                    col1, col2, col3, col4 = st.columns(4)
+                    col1.metric("Channel",   s["channel"])
+                    col2.metric("Status",    s["status"])
+                    col3.metric("Scheduled", s["send_at"][:16].replace("T", " "))
+                    col4.metric("Drift", f"{drift_s:.1f}s", delta=f"{drift_s:.1f}s late", delta_color="inverse")
+                else:
+                    col1, col2, col3 = st.columns(3)
+                    col1.metric("Channel",   s["channel"])
+                    col2.metric("Status",    s["status"])
+                    col3.metric("Scheduled", s["send_at"][:16].replace("T", " "))
     else:
         st.info("No schedules yet.")
 
