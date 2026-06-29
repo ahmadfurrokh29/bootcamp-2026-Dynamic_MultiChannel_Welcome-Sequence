@@ -65,3 +65,25 @@ def test_multiple_users_have_independent_schedules():
     client.post("/signup", json={"name": "U2", "email": "u2@test.com", "phone": "0300222"})
     schedules = client.get("/schedules").json()
     assert len(schedules) == 6
+
+
+def test_delete_user_removes_user_and_schedules():
+    r = client.post("/signup", json={"name": "ToDelete", "email": "delete@test.com", "phone": "03005555555"})
+    user_id = r.json()["user_id"]
+
+    # user and 3 schedules exist
+    assert len(client.get("/schedules").json()) == 3
+    assert len(client.get("/users").json()) == 1
+
+    # delete the user
+    d = client.delete(f"/users/{user_id}")
+    assert d.status_code == 204
+
+    # user and all their schedules are gone
+    assert len(client.get("/users").json()) == 0
+    assert len(client.get("/schedules").json()) == 0
+
+
+def test_delete_nonexistent_user_returns_404():
+    r = client.delete("/users/99999")
+    assert r.status_code == 404

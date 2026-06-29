@@ -1,7 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class User(Base):
@@ -11,7 +15,7 @@ class User(Base):
     name:       Mapped[str]      = mapped_column(String,  nullable=False)
     email:      Mapped[str]      = mapped_column(String,  unique=True, nullable=False)
     phone:      Mapped[str]      = mapped_column(String,  nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     schedules: Mapped[list["MessageSchedule"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
@@ -26,6 +30,6 @@ class MessageSchedule(Base):
     send_at:      Mapped[datetime] = mapped_column(DateTime, nullable=False)
     status:       Mapped[str]              = mapped_column(String,  default="pending")  # pending / sent
     sent_at:      Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    created_at:   Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
+    created_at:   Mapped[datetime]        = mapped_column(DateTime, default=_utcnow)
 
     user: Mapped["User"] = relationship(back_populates="schedules")

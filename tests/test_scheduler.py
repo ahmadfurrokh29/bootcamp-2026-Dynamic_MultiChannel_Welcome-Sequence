@@ -1,5 +1,5 @@
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -37,28 +37,28 @@ def _make_message(db, channel: str, send_at: datetime) -> MessageSchedule:
 
 
 def test_sends_due_messages(db):
-    msg = _make_message(db, "email", datetime.utcnow() - timedelta(seconds=10))
+    msg = _make_message(db, "email", datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10))
     process_due_messages(db)
     db.refresh(msg)
     assert msg.status == "sent"
 
 
 def test_updates_status_to_sent(db):
-    msg = _make_message(db, "sms", datetime.utcnow() - timedelta(seconds=1))
+    msg = _make_message(db, "sms", datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=1))
     process_due_messages(db)
     db.refresh(msg)
     assert msg.status == "sent"
 
 
 def test_ignores_future_messages(db):
-    msg = _make_message(db, "email", datetime.utcnow() + timedelta(seconds=9999))
+    msg = _make_message(db, "email", datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(seconds=9999))
     process_due_messages(db)
     db.refresh(msg)
     assert msg.status == "pending"
 
 
 def test_recovery_after_restart(db):
-    msg    = _make_message(db, "sms", datetime.utcnow() - timedelta(seconds=5))
+    msg    = _make_message(db, "sms", datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=5))
     msg_id = msg.id
     db.close()
     new_db = TestingSession()
@@ -69,7 +69,7 @@ def test_recovery_after_restart(db):
 
 
 def test_already_sent_not_resent(db):
-    msg = _make_message(db, "email", datetime.utcnow() - timedelta(seconds=10))
+    msg = _make_message(db, "email", datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(seconds=10))
     process_due_messages(db)
     db.refresh(msg)
     assert msg.status == "sent"

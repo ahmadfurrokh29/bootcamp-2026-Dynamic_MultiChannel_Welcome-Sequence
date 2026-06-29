@@ -203,6 +203,38 @@ def page_schedules():
     else:
         st.info("No schedules yet.")
 
+    # ── Failure Mode Demo ────────────────────────────────────────────────────
+    st.divider()
+    st.markdown("### 💥 Failure Mode Demo — Simulate Crash")
+    st.caption(
+        "Select a **pending** message and click Simulate Crash. "
+        "The message will be sent (check the log) but `status` stays `pending`. "
+        "Restart the backend and watch it send again — that's a **duplicate send**."
+    )
+
+    pending = [s for s in schedules if s["status"] == "pending"]
+    if pending:
+        options = {
+            f"ID {s['id']} — {s['message_type']} ({s['channel']}) — User #{s['user_id']}": s["id"]
+            for s in pending
+        }
+        selected_label = st.selectbox("Choose a pending message:", list(options.keys()))
+        selected_id    = options[selected_label]
+
+        if st.button("💥 Simulate Crash", type="primary", use_container_width=True):
+            resp = requests.post(f"{API}/simulate-crash/{selected_id}", timeout=5)
+            result = resp.json().get("detail", "")
+            if "Simulated crash" in result:
+                st.error(
+                    f"**Crash simulated!** Message ID {selected_id} was sent but `status` is still `pending`. "
+                    "Check `logs/messages.log` to see the send log. "
+                    "Now restart the backend — the poller will find it pending and send it **again**."
+                )
+            else:
+                st.warning(f"No crash triggered: {result}")
+    else:
+        st.info("No pending messages to crash on. Sign up a new user first.")
+
     st.divider()
     col1, col2 = st.columns(2)
     col1.button("← Back to Sign Up",   on_click=go, args=("signup",), use_container_width=True)

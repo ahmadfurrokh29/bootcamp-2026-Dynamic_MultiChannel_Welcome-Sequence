@@ -47,6 +47,23 @@ def process_due_messages(db: Session, simulate_crash_after_id: int | None = None
         db.commit()
 
 
+def simulate_crash_message(db: Session, message_id: int) -> str:
+    msg = db.get(MessageSchedule, message_id)
+    if not msg:
+        return "not_found"
+    if msg.status == "sent":
+        return "already_sent"
+
+    user: User = msg.user
+    if msg.channel == "email":
+        send_email(user.name, user.email, msg.message_type)
+    else:
+        send_sms(user.name, user.phone, msg.message_type)
+
+    logger.warning(f"CRASH SIMULATED after msg ID {msg.id} — status NOT updated")
+    return "crashed"
+
+
 def run_poller() -> None:
     logger.info("Scheduler started — recovering pending messages from DB")
     while True:

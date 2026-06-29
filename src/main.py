@@ -1,6 +1,6 @@
 import threading
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -9,12 +9,8 @@ from src.config import SMS_DELAY, TIP_DELAY
 from src.database import get_db, init_db
 from src.models import User, MessageSchedule
 from src.schemas import SignupRequest, SignupResponse, ScheduledMessageOut
-from src.scheduler import run_poller, process_due_messages
+from src.scheduler import run_poller, process_due_messages, simulate_crash_message, _now
 from src.logger import logger
-
-
-def _now() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 @asynccontextmanager
@@ -99,8 +95,9 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
 
 @app.post("/simulate-crash/{message_id}", summary="Failure Mode 1: crash after send, before status update")
 def simulate_crash(message_id: int, db: Session = Depends(get_db)):
-    try:
-        process_due_messages(db, simulate_crash_after_id=message_id)
-    except SystemExit as exc:
-        return {"detail": str(exc)}
-    return {"detail": "No crash triggered — message may already be sent or not yet due"}
+    result = simulate_crash_message(db, message_id)
+    if result == "crashed":
+        return {"detail": "Simulated crash for failure mode demo"}
+    if result == "already_sent":
+        return {"detail": "Message already sent — pick a pending one"}
+    return {"detail": "Message not found"}
