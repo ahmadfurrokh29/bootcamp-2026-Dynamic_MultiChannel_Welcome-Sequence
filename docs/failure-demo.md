@@ -14,11 +14,63 @@ This is a classic at-least-once delivery problem in distributed systems.
 
 ## How to reproduce
 
-### Prerequisites
-- Backend running: `uvicorn src.main:app --reload`
-- At least one user signed up with a pending message
+There are two ways to trigger this demo — via the Streamlit UI or via the API directly.
 
-### Step 1 — Sign up a new user
+---
+
+### Option A — Streamlit UI (Recommended)
+
+**Step 1 — Start both servers**
+
+```powershell
+# Backend (PowerShell)
+$env:SMS_DELAY="60"; $env:TIP_DELAY="120"; $env:POLL_INTERVAL="5"; $env:DATABASE_URL="welcome_sequence.db"; $env:LOG_FILE="logs/messages.log"; python -m uvicorn src.main:app --reload
+
+# Frontend (separate terminal)
+python -m streamlit run streamlit_app.py
+```
+
+**Step 2 — Sign up a new user**
+
+Open `http://localhost:8501` → fill in name, email, phone → click Sign Up.
+
+**Step 3 — Wait on the live feed page**
+
+Watch the welcome email turn green immediately. Wait 60 seconds for the SMS to turn green too. At this point `final_tips` is still pending.
+
+**Step 4 — Go to the Schedules page**
+
+Click "View all schedules". Scroll to the bottom — you will see the **Failure Mode Demo** section.
+
+**Step 5 — Select a pending message and click Simulate Crash**
+
+Select `final_tips` from the dropdown and click **💥 Simulate Crash**.
+
+You will see a red error message:
+> "Crash simulated! Message ID X was sent but status is still pending..."
+
+This means the SMS was sent (check `logs/messages.log`) but the database still shows `pending`.
+
+**Step 6 — Restart the backend**
+
+Stop the backend (`Ctrl+C` in its terminal) and start it again with the same command from Step 1.
+
+**Step 7 — Observe the duplicate in the log**
+
+Open `logs/messages.log` — the same `final_tips` message appears **twice**:
+
+```
+20:08:24 | SMS SENT | Type: final_tips      ← first send (before crash)
+20:08:24 | CRASH SIMULATED — status NOT updated
+20:09:20 | Scheduler started — recovering pending messages from DB
+20:09:50 | SMS SENT | Type: final_tips      ← duplicate send (after restart)
+```
+
+---
+
+### Option B — API directly
+
+**Step 1 — Sign up a new user**
 
 ```bash
 curl -X POST http://localhost:8000/signup \
@@ -26,56 +78,26 @@ curl -X POST http://localhost:8000/signup \
   -d '{"name": "Test User", "email": "test@example.com", "phone": "03001234567"}'
 ```
 
-Note the message IDs from the response. The welcome email (message ID 1 or similar) is sent immediately. Wait a few seconds for the SMS follow-up to become pending.
-
-### Step 2 — Check pending messages
+**Step 2 — Find a pending message ID**
 
 ```bash
 curl http://localhost:8000/schedules
 ```
 
-Find a message with `"status": "pending"` and note its `id`.
+Note the `id` of any message with `"status": "pending"`.
 
-### Step 3 — Trigger the simulated crash
+**Step 3 — Trigger the crash**
 
 ```bash
 curl -X POST http://localhost:8000/simulate-crash/{message_id}
 ```
 
-Replace `{message_id}` with the ID of the pending message.
-
-**What happens internally:**
-1. The poller finds the message as due
-2. `send_sms()` is called — the message is "sent" (logged to console and file)
-3. **Before** `status = "sent"` is written to the database — `SystemExit` is raised
-4. The API returns `{"detail": "Simulated crash for failure mode demo"}`
-
-### Step 4 — Verify the message is still pending
+**Step 4 — Restart backend and check logs for duplicate**
 
 ```bash
-curl http://localhost:8000/schedules
+# Ctrl+C, then restart
+python -m uvicorn src.main:app --reload
 ```
-
-The message status is still `"pending"` even though the send already happened. Check `logs/messages.log` — you will see the send log entry.
-
-### Step 5 — Restart the backend
-
-Stop and restart the uvicorn process:
-
-```bash
-# Ctrl+C to stop, then:
-uvicorn src.main:app --reload
-```
-
-### Step 6 — Observe the duplicate send
-
-Check the log file:
-
-```bash
-cat logs/messages.log
-```
-
-You will see the same message sent **twice** — once before the crash and once after the restart recovery. The message now shows `"status": "sent"` in the database.
 
 ---
 
